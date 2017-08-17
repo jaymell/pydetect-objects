@@ -2,7 +2,7 @@ import tensorflow as tf
 from utils import label_map_util
 
 MODEL = "./model/frozen_inference_graph.pb"
-
+PROB_THRESH = 0.5
 
 def load_image_into_numpy_array(image):
   (im_width, im_height) = image.size
@@ -28,10 +28,13 @@ def _detect(image, sess):
     [scores, classes, num_detections],
     feed_dict={image_tensor: image_np_expanded})
 
-  i = num_detections
-  while i > 0:
-    i -= 1
-            
+  detections = []
+  for score, cls in zip(scores, classes):
+    # these are sorted, right?
+    if i[0] < PROB_THRESH: break
+    detections.append(category_index[cls])
+
+  return detections
 
 def detect_objects(image):
   detection_graph = tf.Graph()
