@@ -1,8 +1,12 @@
 import tensorflow as tf
-from utils import label_map_util
+from object_detection.utils import label_map_util
+from PIL import Image
+import numpy as np
 
-MODEL = "./model/frozen_inference_graph.pb"
+MODEL = "./run/object_detection/frozen_inference_graph.pb"
+PATH_TO_LABELS = './run/object_detection/data/mscoco_label_map.pbtxt'
 PROB_THRESH = 0.5
+NUM_CLASSES = 100
 
 def load_image_into_numpy_array(image):
   (im_width, im_height) = image.size
@@ -10,10 +14,11 @@ def load_image_into_numpy_array(image):
       (im_height, im_width, 3)).astype(np.uint8)
 
 
-def _detect(image, sess):
+def _detect_objects(detection_graph, image, sess):
 
   label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
-  categories = label_map_util.convert_label_map_to_categories(label_map, max_num_classes=NUM_CLASSES, use_display_name=True)
+  categories = label_map_util.convert_label_map_to_categories(label_map,
+    max_num_classes=NUM_CLASSES, use_display_name=True)
   category_index = label_map_util.create_category_index(categories)
 
   image = Image.open(image)
@@ -28,15 +33,20 @@ def _detect(image, sess):
     [scores, classes, num_detections],
     feed_dict={image_tensor: image_np_expanded})
 
+  scores = np.ndarray.flatten(scores)
+  classes = np.ndarray.flatten(classes)
   detections = []
   for score, cls in zip(scores, classes):
-    # these are sorted, right?
-    if i[0] < PROB_THRESH: break
-    detections.append(category_index[cls])
+    # this assumes these are sorted, which is currently
+    # the case:
+    if score < PROB_THRESH: break
+    detections.append({ "class": category_index[cls],
+      "probability": score})
 
   return detections
 
 def detect_objects(image):
+
   detection_graph = tf.Graph()
   with detection_graph.as_default():
     od_graph_def = tf.GraphDef()
@@ -44,9 +54,13 @@ def detect_objects(image):
       serialized_graph = fid.read()
       od_graph_def.ParseFromString(serialized_graph)
       tf.import_graph_def(od_graph_def, name='')
-  
 
   with detection_graph.as_default():
     with tf.Session(graph=detection_graph) as sess:
-      return _detect(image, sess)
-     
+      return _detect_objects(detection_graph, image, sess)
+
+
+if __name__ == '__main__':
+  detected = detect_objects('/home/james/Pictures/00taxis1-superJumbo.jpg')
+  print('detected: %s' % detected)
+
