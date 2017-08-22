@@ -6,11 +6,15 @@ from PIL import Image
 import numpy as np
 import datetime
 import io
+import os
 
-MODEL = "./run/object_detection/frozen_inference_graph.pb"
-PATH_TO_LABELS = './run/object_detection/data/mscoco_label_map.pbtxt'
+LIB_DIR=os.getenv("LIB_DIR", "lib")
+MODEL = os.path.join(LIB_DIR, "object_detection/frozen_inference_graph.pb")
+PATH_TO_LABELS = os.path.join(LIB_DIR, "object_detection/data/mscoco_label_map.pbtxt")
+
 PROB_THRESH = 0.5
 NUM_CLASSES = 100
+
 
 def load_image_into_numpy_array(image):
   (im_width, im_height) = image.size
@@ -35,7 +39,7 @@ def detect_objects(images):
 
   def _detect_objects(detection_graph, image, sess):
     x = tf.placeholder(tf.float32, shape=[None, None, None, 3])
-  
+
     image = Image.open(image)
     image_np = load_image_into_numpy_array(image)
     image_np_expanded = np.array([load_image_into_numpy_array(image),load_image_into_numpy_array(image)])
@@ -46,11 +50,11 @@ def detect_objects(images):
     scores = detection_graph.get_tensor_by_name('detection_scores:0')
     classes = detection_graph.get_tensor_by_name('detection_classes:0')
     num_detections = detection_graph.get_tensor_by_name('num_detections:0')
-  
+
     (boxes, scores, classes, num_detections) = sess.run(
       [boxes, scores, classes, num_detections],
       feed_dict={image_tensor: image_np_expanded})
-  
+
     scores = np.ndarray.flatten(scores)
     classes = np.ndarray.flatten(classes)
     detections = []
@@ -60,29 +64,20 @@ def detect_objects(images):
       if score < PROB_THRESH: break
       detections.append({ "class": category_index[cls],
         "probability": score})
-  
+
     return detections
 
-
-  results = []
   with detection_graph.as_default():
     with tf.Session(graph=detection_graph) as sess:
-      for image in images:
-        results.append(_detect_objects(detection_graph, image, sess))
+      for i in images:
+        yield _detect_objects(detection_graph, i, sess)
 
-  return results
 
 if __name__ == '__main__':
-#  for i in range(100):
-    t1 = datetime.datetime.now()
-    detected = detect_objects(['/home/james/Pictures/lena30.jpg', '/home/james/Pictures/monkey-cropped-512.jpg'])
-    print('detected: %s' % detected)
+  t1 = datetime.datetime.now()
+  for detected in detect_objects(['/home/james/Pictures/lena30.jpg', '/home/james/Pictures/monkey-cropped-512.jpg']):
     t2 = datetime.datetime.now()
+    print('detected: %s' % detected)
     d1 = t2 - t1
     print(d1)
-
-#    detected = detect_objects('/home/james/Pictures/me-n-kip.jpeg')
-#    print('detected: %s' % detected)
-#    t3 = datetime.datetime.now()
-#    d2 = t3 - t2
-#    print(d2)
+    t1 = t2
