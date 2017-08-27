@@ -28,8 +28,7 @@ class TfDetector(ObjectDetector):
   def __init__(self):
     pass
 
-  def detect_objects(images):
-
+  def detect_objects(self, images):
     label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
     categories = label_map_util.convert_label_map_to_categories(label_map,
       max_num_classes=NUM_CLASSES, use_display_name=True)
@@ -46,7 +45,6 @@ class TfDetector(ObjectDetector):
     def _detect_objects(detection_graph, image, sess):
       x = tf.placeholder(tf.float32, shape=[None, None, None, 3])
 
-      image = Image.open(image)
       image_np = load_image_into_numpy_array(image)
       image_np_expanded = np.expand_dims(image_np, axis=0)
 
@@ -69,10 +67,8 @@ class TfDetector(ObjectDetector):
         if score < PROB_THRESH: break
         detections.append({ "class": category_index[cls],
           "probability": score})
-
       return detections
 
     with detection_graph.as_default():
       with tf.Session(graph=detection_graph) as sess:
-        for i in images:
-          yield _detect_objects(detection_graph, i, sess)
+        return [ _detect_objects(detection_graph, i, sess) for i in images ]

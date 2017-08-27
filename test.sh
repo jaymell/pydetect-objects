@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export PYTHONPATH=$PYTHONPATH:`pwd`/src
+export PYTHONPATH=$PYTHONPATH:`pwd`
 
 . build.sh
-python3 -m unittest test/*.py
+python3 -m unittest src/detector/test/*.py src/source/test/*.py

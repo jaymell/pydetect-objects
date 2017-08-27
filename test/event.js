@@ -12,9 +12,9 @@
             "eventVersion": "1.0",
             "eventID": "shardId-000000000000:49576003712366067137910164966549248442876174662463651842",
             "eventName": "aws:kinesis:record",
-            "invokeIdentityArn": "arn:aws:iam::799617403160:role/service-role/kinesisTest",
+            "invokeIdentityArn": "arn:aws:iam::0123456789012:role/service-role/kinesisTest",
             "awsRegion": "us-west-2",
-            "eventSourceARN": "arn:aws:kinesis:us-west-2:799617403160:stream/smartcam"
+            "eventSourceARN": "arn:aws:kinesis:us-west-2:0123456789012:stream/smartcam"
         }
     ]
 }

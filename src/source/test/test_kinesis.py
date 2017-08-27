@@ -1,5 +1,5 @@
 import unittest
-import kinesis
+from src.source import kinesis
 import json
 from PIL import Image
 import os
