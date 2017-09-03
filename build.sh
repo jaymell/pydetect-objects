@@ -1,7 +1,7 @@
 #!/bin/bash -xe
 
 
-TF_MODELS_DIR="/home/james/src/tensorflow/models"
+TF_MODELS_DIR=${TF_MODELS_DIR:-~/src/tensorflow/models}
 MODEL_ARCHIVE=ssd_mobilenet_v1_coco_11_06_2017
 MODEL_ARCHIVE_FILE=${MODEL_ARCHIVE}.tar.gz
 MODEL_URL=http://download.tensorflow.org/models/object_detection/${MODEL_ARCHIVE_FILE}

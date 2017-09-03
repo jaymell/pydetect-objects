@@ -1,12 +1,17 @@
 import boto3
 import base64
-from PIL import Image
 import io
 import time
 from .interface import Source
 import pprint
-
+import json
+from dateutil import parser
+from .frame import EncodedFrame
+from PIL import Image
+import logging
 # import kcl
+
+logger = logging.getLogger(__name__)
 
 get_shards = lambda it: it['StreamDescription']['Shards']
 get_top_shard = lambda it: get_shards(it)[0]
@@ -32,17 +37,20 @@ class KinesisSource(Source):
     self.region = region
 
   def _deserialize(self, serialized):
-    return get_image(serialized)
+    frame_json = json.loads(serialized.decode('utf-8'))
+    img_bytes = io.BytesIO(base64.b64decode(frame_json['image']))
+    img = Image.open(img_bytes)
+    time = parser.parse(frame_json['time'])
+    width = frame_json['width']
+    height = frame_json['height']
+    camera_id = frame_json['id']
+    frame = EncodedFrame(camera_id, img, width, height, time)
+    return frame
 
-  # def get_images(self):
-  #   kinesis_data = next(self._get_kinesis())
-  #   records = _get_records(kinesis_data)
-  #   data = map(get_data, records)
-  #   images = map(self._deserialize, data)
-  #   yield list(images)
-
-  def get_images(self):
-    cli = boto3.client('kinesis', region_name=self.region)
+  def get_frames(self, cli=None):
+    ''' cli as optional parameter allows for injecting mock client '''
+    if cli is None:
+      cli = boto3.client('kinesis', region_name=self.region)
     iterator = get_shard_iterator(cli.get_shard_iterator(
       StreamName = self.stream,
       ShardId = self.shard_id,
@@ -52,15 +60,15 @@ class KinesisSource(Source):
       try:
         resp = cli.get_records(ShardIterator = iterator)
       except Exception as e:
-        print('exception: ', e)
+        logger.error('exception: %s' % e)
         ## FIXME -- use botocore's backoff, which doesn't seem to be applied by default:
         time.sleep(.5)
         continue
       iterator = resp['NextShardIterator'] if resp['NextShardIterator'] else None
       records = _get_records(resp)
       data = map(get_data, records)
-      images = map(self._deserialize, data)
-      yield list(images)
+      frames = map(self._deserialize, data)
+      yield list(frames)
 
 
 # class KinesisRecordProcessor(kcl.RecordProcessorBase):

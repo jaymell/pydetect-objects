@@ -9,3 +9,8 @@ class Dynamo(DB):
     self.db = db
 
   def put_record(self, record):
+    pass
+
+
+class Record:
+  pass

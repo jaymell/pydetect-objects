@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import logging
 import tensorflow as tf
 from object_detection.utils import label_map_util
 from PIL import Image
@@ -8,6 +9,8 @@ import datetime
 import io
 import os
 from .interface import ObjectDetector
+
+logger = logging.getLogger(__name__)
 
 LIB_DIR=os.getenv("LIB_DIR", "lib")
 MODEL = os.path.join(LIB_DIR, "object_detection/frozen_inference_graph.pb")
@@ -21,6 +24,10 @@ def load_image_into_numpy_array(image):
   (im_width, im_height) = image.size
   return np.array(image.getdata()).reshape(
       (im_height, im_width, 3)).astype(np.uint8)
+
+
+# return tuple of detection class name and probability:
+clean_output = lambda it: [ ( i['class']['name'], i['probability'] ) for i in it ]
 
 
 class TfDetector(ObjectDetector):
@@ -71,4 +78,5 @@ class TfDetector(ObjectDetector):
 
     with detection_graph.as_default():
       with tf.Session(graph=detection_graph) as sess:
-        return [ _detect_objects(detection_graph, i, sess) for i in images ]
+        results = [ clean_output(_detect_objects(detection_graph, i, sess)) for i in images ]
+        return results
