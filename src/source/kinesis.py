@@ -9,6 +9,8 @@ from dateutil import parser
 from .frame import EncodedFrame
 from PIL import Image
 import logging
+import random
+
 # import kcl
 
 logger = logging.getLogger(__name__)
@@ -23,8 +25,9 @@ get_data = lambda it: it['Data']
 get_image = lambda it: Image.open(io.BytesIO(it))
 
 
-def get_shard_id(stream, region):
-  cli = boto3.client('kinesis', region_name=region)
+def get_shard_id(stream, region, cli=None):
+  if cli is None:
+    cli = boto3.client('kinesis', region_name=region)
   return _get_shard_id(get_top_shard((cli.describe_stream(StreamName=stream))))
 
 
@@ -48,9 +51,12 @@ class KinesisSource(Source):
     return frame
 
   def get_frames(self, cli=None):
-    ''' cli as optional parameter allows for injecting mock client '''
+    ''' generator that returns frames; cli can be optionally mocked '''
+
+    retries = 0
     if cli is None:
       cli = boto3.client('kinesis', region_name=self.region)
+
     iterator = get_shard_iterator(cli.get_shard_iterator(
       StreamName = self.stream,
       ShardId = self.shard_id,
@@ -60,14 +66,15 @@ class KinesisSource(Source):
       try:
         resp = cli.get_records(ShardIterator = iterator)
       except Exception as e:
-        logger.error('exception: %s' % e)
-        ## FIXME -- use botocore's backoff, which doesn't seem to be applied by default:
-        time.sleep(.5)
+        ## FIXME -- must be a way to use boto3 retry logic
+        time.sleep(2**retries + (random.randint(0, 1000) / 1000))
+        retries += 1
         continue
       iterator = resp['NextShardIterator'] if resp['NextShardIterator'] else None
       records = _get_records(resp)
       data = map(get_data, records)
       frames = map(self._deserialize, data)
+      retries = 0
       yield list(frames)
 
 

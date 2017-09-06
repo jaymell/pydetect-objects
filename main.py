@@ -27,38 +27,35 @@ def print_it(it):
 
 def on_next(it):
   try:
-    if type(it) == list:
-      for i in it:
-        print("camera id: %s, time: %s, detections: %s" % (i[0].id, i[0].time, i[1]))
+    print("camera id: %s, time: %s, detections: %s" % (it[0].id, it[0].time, it[1]))
   except Exception as e:
     logger.error(e)
+
 
 def main():
   shard_id = kinesis.get_shard_id(STREAM, REGION)
   source = kinesis.KinesisSource(STREAM, shard_id, REGION)
   detector = tf.TfDetector()
-  optimal_thread_count = multiprocessing.cpu_count()
+  optimal_thread_count = multiprocessing.cpu_count() + 1
   pool_scheduler = ThreadPoolScheduler(optimal_thread_count)
 
-  def detect_objects(frames):
-    if frames:
+  def detect_objects(frame, _):
       start = datetime.datetime.now()
-      detections = detector.detect_objects([i.image for i in frames])
+      detections = detector.detect_objects(frame.image)
       diff = datetime.datetime.now() - start
-      logger.info("Number of images: %s , time: %s" % (len(frames), diff))
-      return list(zip(frames, detections))
+      logger.info("Detection time: %s" % diff)
+      return (frame, detections)
 
-  def insert_db(frame_detection_pairs, _):
-    if type(frame_detection_pairs) == list:
-      for pair in frame_detection_pairs:
-        frame = pair[0]
-        detections = pair[1]
-        print('inserting: ', frame.time, detections)
+  def insert_db(frame_detection_pair, _):
+    frame = frame_detection_pair[0]
+    detections = frame_detection_pair[1]
+    if detections:
+      print('inserting: ', frame.time, detections)
+    return frame_detection_pair
 
   try:
     rx.Observable.from_iterable(source.get_frames()) \
       .flat_map(lambda it: it) \
-      .buffer_with_time(BUFFER_TIME) \
       .observe_on(pool_scheduler) \
       .map(detect_objects) \
       .map(insert_db) \
@@ -71,5 +68,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
-

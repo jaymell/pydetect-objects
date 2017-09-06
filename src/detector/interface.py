@@ -7,6 +7,6 @@ class ObjectDetector(metaclass=abc.ABCMeta):
     pass
 
   @abc.abstractmethod
-  def detect_objects(self, images):
+  def detect_objects(self, image):
     pass
 
