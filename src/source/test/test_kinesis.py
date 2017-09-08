@@ -15,7 +15,7 @@ test_get_records = {'Records': [{'PartitionKey': 'asdf', 'Data': b'{"height": 51
 class TestKinesis(unittest.TestCase):
 
   def test_get_frames(self):
-    client = boto3.client('kinesis', 'us-east-1')
+    client = boto3.client('kinesis', region_name='us-east-1')
     stubber = Stubber(client)
     stubber.add_response('get_shard_iterator', test_get_shard_iterator)
     stubber.add_response('get_records', test_get_records)

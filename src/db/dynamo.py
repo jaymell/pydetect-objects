@@ -1,16 +1,32 @@
 import boto3
 from .interface import DB
+from .record import DBRecord
 
-client = boto3.client('dynamodb')
 
 class Dynamo(DB):
 
-  def __init__(self, db):
+  def __init__(self, db, region):
     self.db = db
+    self.region = region
 
-  def put_record(self, record):
-    pass
+  def put_record(self, record, cli=None):
+    if not cli:
+      cli = boto3.client('dynamodb', region_name=self.region)
+    return cli.put_item(
+      TableName=self.db,
+      Item=record.record())
 
 
-class Record:
-  pass
+class DynamoRecord(DBRecord):
+
+  def __init__(self, camera_id, time, detections):
+    self.id = camera_id
+    self.time = time
+    self.detections = detections
+
+  def record(self):
+    return {
+      'camera_id': { 'S': self.id },
+      'time': { 'N': str(self.time) },
+      'detections': { 'L': [ {'S': i[0] } for i in self.detections ]}
+    }
