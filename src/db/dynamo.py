@@ -28,5 +28,5 @@ class DynamoRecord(DBRecord):
     return {
       'camera_id': { 'S': self.id },
       'time': { 'N': str(self.time) },
-      'detections': { 'L': [ {'S': i[0] } for i in self.detections ]}
+      'detections': { 'L': [ {'S': i[0] } for i in self.detections ] }
     }

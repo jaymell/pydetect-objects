@@ -10,8 +10,8 @@ from .frame import EncodedFrame
 from PIL import Image
 import logging
 import random
-
 # import kcl
+
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +66,13 @@ class KinesisSource(Source):
       try:
         resp = cli.get_records(ShardIterator = iterator)
       except Exception as e:
-        ## FIXME -- must be a way to use boto3 retry logic
-        time.sleep(2**retries + (random.randint(0, 1000) / 1000))
-        retries += 1
-        continue
+        if e.response['Error']['Code'] == 'ProvisionedThroughputExceededException':
+          ## FIXME -- must be a way to use boto3 retry logic
+          time.sleep(2**retries + (random.randint(0, 1000) / 1000))
+          retries += 1
+          continue
+        else:
+          raise e
       iterator = resp['NextShardIterator'] if resp['NextShardIterator'] else None
       records = _get_records(resp)
       data = map(get_data, records)

@@ -46,11 +46,11 @@ def main():
   pool_scheduler = ThreadPoolScheduler(optimal_thread_count)
 
   def detect_objects(frame, _):
-      start = datetime.datetime.now()
-      detections = detector.detect_objects(frame.image)
-      diff = datetime.datetime.now() - start
-      logger.info("Detection time: %s" % diff)
-      return (frame, detections)
+    start = datetime.datetime.now()
+    detections = detector.detect_objects(frame.image)
+    diff = datetime.datetime.now() - start
+    logger.info("Detection time: %s" % diff)
+    return (frame, detections)
 
   def insert_db(db, frame_detection_pair):
     frame = frame_detection_pair[0]
@@ -64,7 +64,6 @@ def main():
   try:
     rx.Observable.from_iterable(source.get_frames()) \
       .flat_map(lambda it: it) \
-      .map(lambda it: print_it(it)) \
       .observe_on(pool_scheduler) \
       .map(detect_objects) \
       .filter(lambda frame_detection_pair: len(frame_detection_pair[1]) > 0) \
@@ -75,6 +74,7 @@ def main():
         lambda it: print('Complete'))
   except Exception as e:
     logger.error("exception: %s" % e)
+
 
 if __name__ == '__main__':
   main()
