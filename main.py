@@ -36,6 +36,41 @@ def on_next(it):
     logger.error(e)
 
 
+def on_err(it):
+  logger.error(it)
+  raise it
+
+
+def timer(func):
+  def wrapped(*args, **kwargs):
+    start = datetime.datetime.now()
+    resp = func(*args, **kwargs)
+    diff = datetime.datetime.now() - start
+    logger.info("%s: %s" % (func.__name__, diff))
+    return resp
+  return wrapped
+
+
+def get_frames(source):
+  return source.get_frames()
+
+
+@timer
+def detect_objects(detector, frame):
+  detections = detector.detect_objects(frame.image)
+  return (frame, detections)
+
+
+@timer
+def insert_db(Record, db, frame_detection_pair):
+  frame = frame_detection_pair[0]
+  detections = frame_detection_pair[1]
+  print('inserting: ', frame.time, detections)
+  record = Record(frame.id, frame.time, detections)
+  resp = db.put_record(record)
+  return frame_detection_pair
+
+
 def main():
   shard_id = kinesis.get_shard_id(STREAM, REGION)
   source = kinesis.KinesisSource(STREAM, shard_id, REGION)
@@ -45,33 +80,16 @@ def main():
   optimal_thread_count = multiprocessing.cpu_count() + 1
   pool_scheduler = ThreadPoolScheduler(optimal_thread_count)
 
-  def detect_objects(frame, _):
-    start = datetime.datetime.now()
-    detections = detector.detect_objects(frame.image)
-    diff = datetime.datetime.now() - start
-    logger.info("Detection time: %s" % diff)
-    return (frame, detections)
-
-  def insert_db(db, frame_detection_pair):
-    frame = frame_detection_pair[0]
-    detections = frame_detection_pair[1]
-    print('inserting: ', frame.time, detections)
-    record = Record(frame.id, frame.time, detections)
-    resp = db.put_record(record)
-    print('resp: ', resp)
-    return frame_detection_pair
-
   try:
-    rx.Observable.from_iterable(source.get_frames()) \
+    rx.Observable.from_iterable(get_frames(source)) \
       .flat_map(lambda it: it) \
-      .observe_on(pool_scheduler) \
-      .map(detect_objects) \
+      .flat_map(lambda it: rx.Observable.start(lambda: detect_objects(detector, it))) \
       .filter(lambda frame_detection_pair: len(frame_detection_pair[1]) > 0) \
-      .map(lambda frame_detection_pair, _: insert_db(db, frame_detection_pair)) \
+      .flat_map(lambda frame_detection_pair, _: rx.Observable.start(lambda: insert_db(Record, db, frame_detection_pair))) \
       .subscribe(
         on_next,
-        lambda err: logger.error(err),
-        lambda it: print('Complete'))
+        on_err,
+        lambda: print('Complete'))
   except Exception as e:
     logger.error("exception: %s" % e)
 
