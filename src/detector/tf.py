@@ -29,12 +29,13 @@ def load_image_into_numpy_array(image):
 
 class TfDetector(ObjectDetector):
 
-  def __init__(self, model=MODEL, labels=PATH_TO_LABELS):
+  def __init__(self, model=MODEL, labels=PATH_TO_LABELS, prob_thresh=PROB_THRESH):
     self.lock = threading.Lock()
     self.model = model
     self.label_map = labels
     self.graph = tf.Graph()
     self.session = tf.Session(graph=self.graph)
+    self.prob_thresh = prob_thresh
 
     with self.graph.as_default():
       od_graph_def = tf.GraphDef()
@@ -75,7 +76,7 @@ class TfDetector(ObjectDetector):
       for score, cls in zip(scores, classes):
         # this assumes these are sorted, which is currently
         # the case:
-        if score < PROB_THRESH: break
+        if score < self.prob_thresh: break
         detections.append( (self.category_index[cls]['name'], score) )
       logger.debug('finished detect_objects. returning')
       return detections

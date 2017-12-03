@@ -25,19 +25,18 @@ get_data = lambda it: it['Data']
 get_image = lambda it: Image.open(io.BytesIO(it))
 
 
-def get_shard_id(stream, region, cli=None):
+def get_shard_id(stream, cli=None):
   if cli is None:
-    cli = boto3.client('kinesis', region_name=region)
+    cli = boto3.client('kinesis')
   return _get_shard_id(get_top_shard((cli.describe_stream(StreamName=stream))))
 
 
 class KinesisSource(Source):
 
-  def __init__(self, stream, shard_id, region, iterator_type='LATEST'):
+  def __init__(self, stream, shard_id, iterator_type):
     self.stream = stream
     self.shard_id = shard_id
     self.iterator_type = iterator_type
-    self.region = region
 
   def _deserialize(self, serialized):
     frame_json = json.loads(serialized.decode('utf-8'))
@@ -55,7 +54,7 @@ class KinesisSource(Source):
 
     retries = 0
     if cli is None:
-      cli = boto3.client('kinesis', region_name=self.region)
+      cli = boto3.client('kinesis')
 
     iterator = get_shard_iterator(cli.get_shard_iterator(
       StreamName = self.stream,

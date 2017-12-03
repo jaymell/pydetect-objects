@@ -5,13 +5,12 @@ from .record import DBRecord
 
 class Dynamo(DB):
 
-  def __init__(self, db, region):
+  def __init__(self, db):
     self.db = db
-    self.region = region
 
-  def put_record(self, record, cli=None):
+  def put_record(self, cli=None):
     if not cli:
-      cli = boto3.client('dynamodb', region_name=self.region)
+      cli = boto3.client('dynamodb')
     return cli.put_item(
       TableName=self.db,
       Item=record.record())

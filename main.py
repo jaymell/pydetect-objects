@@ -1,26 +1,34 @@
 #!/usr/bin/env python3
 
 import logging
+import os
 import sys
+import configparser
 from src.detector import tf
 from src.source import kinesis
 from src.db import dynamo
 import rx
 from rx.concurrency import ThreadPoolScheduler
 import multiprocessing
-from rx import config
+from rx import config as rx_config
 import datetime
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-config["concurrency"] = multiprocessing
+rx_config["concurrency"] = multiprocessing
 
-# move to config file:
-REGION = 'us-west-2'
-STREAM = 'smartcam'
-TABLE = 'smartcam'
-BUFFER_TIME = 5000
+
+def load_config():
+  CONFIG_FILE = "config"
+  p = configparser.ConfigParser()
+  p.read(CONFIG_FILE)
+  conf = {}
+  conf['table'] = os.environ.get('TABLE', p.get('main', 'table'))
+  conf['stream'] = os.environ.get('STREAM', p.get('main', 'stream'))
+  conf['prob_thresh'] = int(os.environ.get('PROB_THRESH', p.get('main', 'prob_thresh')))
+  conf['iterator_type'] = os.environ.get('ITERATOR_TYPE', p.get('main', 'iterator_type'))
+  return conf
 
 
 def print_it(it):
@@ -72,10 +80,16 @@ def insert_db(Record, db, frame_detection_pair):
 
 
 def main():
-  shard_id = kinesis.get_shard_id(STREAM, REGION)
-  source = kinesis.KinesisSource(STREAM, shard_id, REGION)
-  detector = tf.TfDetector()
-  db = dynamo.Dynamo(TABLE, REGION)
+  config = load_config()
+  stream = config['stream']
+  prob_thresh = config['prob_thresh']
+  table = config['table']
+  iterator_type = config['iterator_type']
+
+  shard_id = kinesis.get_shard_id(stream)
+  source = kinesis.KinesisSource(stream, shard_id, iterator_type)
+  detector = tf.TfDetector(prob_thresh=prob_thresh)
+  db = dynamo.Dynamo(table)
   Record = dynamo.DynamoRecord
   optimal_thread_count = multiprocessing.cpu_count() + 1
   pool_scheduler = ThreadPoolScheduler(optimal_thread_count)
