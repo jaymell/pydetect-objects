@@ -1,0 +1,7 @@
+boto3==1.4.7
+numpy==1.13.1
+Rx==1.5.9
+botocore==1.7.4
+tensorflow==1.2.1
+Pillow==4.3.0
+python_dateutil==2.6.1
