@@ -49,3 +49,5 @@ COPY main.py $APP_DIR/
 COPY config $APP_DIR/
 
 ENV PYTHONPATH $PYTHONPATH:${LIB_DIR}:${LIB_DIR}/research/slim:${LIB_DIR}/research
+
+CMD [ "python3", "main.py" ]
