@@ -14,8 +14,8 @@ import threading
 logger = logging.getLogger(__name__)
 
 LIB_DIR=os.getenv("LIB_DIR", "lib")
-MODEL = os.path.join(LIB_DIR, "object_detection/frozen_inference_graph.pb")
-PATH_TO_LABELS = os.path.join(LIB_DIR, "object_detection/data/mscoco_label_map.pbtxt")
+MODEL = os.path.join(LIB_DIR, "research/object_detection/frozen_inference_graph.pb")
+PATH_TO_LABELS = os.path.join(LIB_DIR, "research/object_detection/data/mscoco_label_map.pbtxt")
 
 PROB_THRESH = 0.5
 NUM_CLASSES = 100

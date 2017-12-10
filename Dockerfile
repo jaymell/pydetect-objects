@@ -1,5 +1,4 @@
 FROM ubuntu:16.04
-
 ENV APP_DIR /app
 ENV LIB_DIR $APP_DIR/lib
 ENV MODEL_ARCHIVE ssd_mobilenet_v1_coco_11_06_2017
@@ -30,20 +29,23 @@ RUN apt-get update && apt-get install -y \
   #tcl8.5-dev tk8.5-dev python-tk
   #libtiff4-dev
 
-### tensorflow models
-###
-RUN git clone --depth=1 https://github.com/tensorflow/models $LIB_DIR
-
 COPY requirements.txt $APP_DIR/
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-RUN wget -nv $MODEL_URL -O - | tar xzf - -C /tmp/
-COPY . $APP_DIR/
+### tensorflow models
+###
+RUN git clone --depth=1 https://github.com/tensorflow/models $LIB_DIR && \
+  bash -O extglob -c 'rm -rf $LIB_DIR/.git* && rm -rf $LIB_DIR/!(research) && rm -rf $LIB_DIR/research/!(slim|object_detection)'
 
-RUN cp /tmp/${MODEL_ARCHIVE}/* ${LIB_DIR}/research/object_detection/
+RUN wget -nv $MODEL_URL -O - | tar xzf - -C /tmp/ && \
+  mv /tmp/${MODEL_ARCHIVE}/* ${LIB_DIR}/research/object_detection/
 
 WORKDIR $LIB_DIR/research
-RUN protoc object_detection/protos/*.proto --python_out=${LIB_DIR}
+RUN protoc object_detection/protos/*.proto --python_out=.
 WORKDIR $APP_DIR
 
-ENV PYTHONPATH $PYTHONPATH:${LIB_DIR}:${LIB_DIR}/slim:${LIB_DIR}/research
+COPY src $APP_DIR/src
+COPY main.py $APP_DIR/
+COPY config $APP_DIR/
+
+ENV PYTHONPATH $PYTHONPATH:${LIB_DIR}:${LIB_DIR}/research/slim:${LIB_DIR}/research
