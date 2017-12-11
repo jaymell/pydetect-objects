@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import logging
 import tensorflow as tf
 from object_detection.utils import label_map_util
@@ -53,9 +51,7 @@ class TfDetector(ObjectDetector):
     self.session.close()
 
   def detect_objects(self, image):
-    logger.debug('getting lock')
     with self.lock:
-      logger.debug('got lock')
       x = tf.placeholder(tf.float32, shape=[None, None, None, 3])
 
       image_np = load_image_into_numpy_array(image)
@@ -78,5 +74,4 @@ class TfDetector(ObjectDetector):
         # the case:
         if score < self.prob_thresh: break
         detections.append( (self.category_index[cls]['name'], score) )
-      logger.debug('finished detect_objects. returning')
       return detections

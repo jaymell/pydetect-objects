@@ -13,7 +13,6 @@ import multiprocessing
 from rx import config as rx_config
 import datetime
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 rx_config["concurrency"] = multiprocessing
@@ -25,6 +24,7 @@ def load_config():
   p.read(CONFIG_FILE)
   conf = {}
   conf['table'] = os.environ.get('TABLE', p.get('main', 'table'))
+  conf['log_level'] = os.environ.get('LOG_LEVEL', p.get('main', 'log_level'))
   conf['stream'] = os.environ.get('STREAM', p.get('main', 'stream'))
   conf['prob_thresh'] = int(os.environ.get('PROB_THRESH', p.get('main', 'prob_thresh')))
   conf['iterator_type'] = os.environ.get('ITERATOR_TYPE', p.get('main', 'iterator_type'))
@@ -65,6 +65,7 @@ def get_frames(source):
 
 @timer
 def detect_objects(detector, frame):
+  logger.debug('frame time %s, width %s, height %s' % (frame.time, frame.width, frame.height))
   detections = detector.detect_objects(frame.image)
   return (frame, detections)
 
@@ -73,18 +74,19 @@ def detect_objects(detector, frame):
 def insert_db(Record, db, frame_detection_pair):
   frame = frame_detection_pair[0]
   detections = frame_detection_pair[1]
-  print('inserting: ', frame.time, detections)
+  logger.debug('inserting: ', frame.time, detections)
   record = Record(frame.id, frame.time, detections)
   resp = db.put_record(record)
   return frame_detection_pair
 
 
-def main():
-  config = load_config()
+def main(config):
+
   stream = config['stream']
   prob_thresh = config['prob_thresh']
   table = config['table']
   iterator_type = config['iterator_type']
+
 
   shard_id = kinesis.get_shard_id(stream)
   source = kinesis.KinesisSource(stream, shard_id, iterator_type)
@@ -108,5 +110,18 @@ def main():
     logger.error("exception: %s" % e)
 
 
+def load_logging(log_level_str):
+  log_level = getattr(logging, log_level_str.upper())
+  logging.basicConfig(stream=sys.stdout, level=log_level)
+
+
 if __name__ == '__main__':
-  main()
+  config = load_config()
+  load_logging(config['log_level'])
+
+  ### reduce aws sdk logging:
+  logging.getLogger('boto3').setLevel(logging.WARNING)
+  logging.getLogger('botocore').setLevel(logging.WARNING)
+  logging.getLogger('nose').setLevel(logging.WARNING)
+
+  main(config)

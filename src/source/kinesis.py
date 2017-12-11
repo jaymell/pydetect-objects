@@ -10,8 +10,6 @@ from .frame import EncodedFrame
 from PIL import Image
 import logging
 import random
-# import kcl
-
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +18,6 @@ get_top_shard = lambda it: get_shards(it)[0]
 _get_shard_id = lambda it: it['ShardId']
 get_shard_iterator = lambda it: it['ShardIterator']
 _get_records = lambda it: it['Records']
-# get_data = lambda it: base64.b64decode(it['Data'])
 get_data = lambda it: it['Data']
 get_image = lambda it: Image.open(io.BytesIO(it))
 
@@ -79,18 +76,4 @@ class KinesisSource(Source):
       retries = 0
       yield list(frames)
 
-
-# class KinesisRecordProcessor(kcl.RecordProcessorBase):
-#   def __init__(self, record_handler):
-#     self.record_handler = record_handler
-
-#   def initialize(self, shard_id):
-#     self.shard_id = shard_id
-
-#   def process_records(self, records, checkpointer):
-#     self.record_handler(records)
-#     checkpointer.checkpoint()
-
-#   def shutdown(self, checkpointer, reason):
-#     pass
 
