@@ -26,7 +26,7 @@ def load_config():
   conf['table'] = os.environ.get('TABLE', p.get('main', 'table'))
   conf['log_level'] = os.environ.get('LOG_LEVEL', p.get('main', 'log_level'))
   conf['stream'] = os.environ.get('STREAM', p.get('main', 'stream'))
-  conf['prob_thresh'] = int(os.environ.get('PROB_THRESH', p.get('main', 'prob_thresh')))
+  conf['prob_thresh'] = float(os.environ.get('PROB_THRESH', p.get('main', 'prob_thresh')))
   conf['iterator_type'] = os.environ.get('ITERATOR_TYPE', p.get('main', 'iterator_type'))
   return conf
 
@@ -74,7 +74,7 @@ def detect_objects(detector, frame):
 def insert_db(Record, db, frame_detection_pair):
   frame = frame_detection_pair[0]
   detections = frame_detection_pair[1]
-  logger.debug('inserting: ', frame.time, detections)
+  logger.debug('inserting: %s, %s' % (frame.time, detections))
   record = Record(frame.id, frame.time, detections)
   resp = db.put_record(record)
   return frame_detection_pair

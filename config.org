@@ -3,8 +3,8 @@
 table = name-of-dynamo-detection-table
 stream = name-of-kinesis-image-stream
 
-# minimum probability threshold used by tensorflow (0-100)
-prob_thresh = 80
+# minimum probability threshold used by tensorflow (0-1)
+prob_thresh = .8
 
 # kinesis iterator type -- should be
 # one of [AFTER_SEQUENCE_NUMBER, LATEST, AT_TIMESTAMP, AT_SEQUENCE_NUMBER, TRIM_HORIZON]

@@ -8,7 +8,7 @@ class Dynamo(DB):
   def __init__(self, db):
     self.db = db
 
-  def put_record(self, cli=None):
+  def put_record(self, record, cli=None):
     if not cli:
       cli = boto3.client('dynamodb')
     return cli.put_item(
