@@ -1,3 +1,0 @@
-#!/bin/bash
-
-docker run -d --shm-size 8G -e PROB_THRESHOLD=.7 -e AWS_DEFAULT_REGION=us-west-2 -v ~/.aws:/root/.aws -it pydo:latest
