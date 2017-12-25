@@ -2,4 +2,4 @@ __pycache__
 lib/
 export/
 config
-docker-run
+docker-run*
