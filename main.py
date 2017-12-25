@@ -31,8 +31,8 @@ def load_config():
   return conf
 
 
-def print_it(it):
-  print('printing: ', it)
+def print_it(it, *args, **kwargs):
+  print('printing: ', it, *args, **kwargs)
   return it
 
 
@@ -97,18 +97,22 @@ def main(config):
   pool_scheduler = ThreadPoolScheduler(optimal_thread_count)
 
   try:
+    # FIXME: this will currently block on detect_objects
+    # need buffered/pausable implementation: 
+    # this will ultimately cause oom error:
+    #  .flat_map(lambda it: rx.Observable.start(lambda: detect_objects(detector, it))) \
     rx.Observable.from_iterable(get_frames(source)) \
       .flat_map(lambda it: it) \
-      .flat_map(lambda it: detect_objects(detector, it)) \
+      .map(lambda it: detect_objects(detector, it)) \
       .filter(lambda frame_detection_pair: len(frame_detection_pair[1]) > 0) \
-      .flat_map(lambda frame_detection_pair, _: \
-        rx.Observable.start(lambda: insert_db(Record, db, frame_detection_pair))) \
+      .flat_map(lambda frame_detection_pair, _: rx.Observable.start(lambda: insert_db(Record, db, frame_detection_pair))) \
       .subscribe(
         on_next,
         on_err,
         lambda: print('Complete'))
   except Exception as e:
     logger.error("exception: %s" % e)
+    raise e
 
 
 def load_logging(log_level_str):
