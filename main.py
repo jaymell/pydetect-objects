@@ -99,9 +99,10 @@ def main(config):
   try:
     rx.Observable.from_iterable(get_frames(source)) \
       .flat_map(lambda it: it) \
-      .flat_map(lambda it: rx.Observable.start(lambda: detect_objects(detector, it))) \
+      .flat_map(lambda it: detect_objects(detector, it)) \
       .filter(lambda frame_detection_pair: len(frame_detection_pair[1]) > 0) \
-      .flat_map(lambda frame_detection_pair, _: rx.Observable.start(lambda: insert_db(Record, db, frame_detection_pair))) \
+      .flat_map(lambda frame_detection_pair, _: \
+        rx.Observable.start(lambda: insert_db(Record, db, frame_detection_pair))) \
       .subscribe(
         on_next,
         on_err,
